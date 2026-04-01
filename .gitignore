@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment variables — never commit real secrets
+.env
+
+# Uploads (runtime data)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# MySQL data volume (if accidentally created locally)
+mysql_data/
+
+# Project spec and local notes — not needed in the repo
+Project_1.pdf
+rules.txt
+
+# TypeScript build info
+*.tsbuildinfo
+next-env.d.ts
