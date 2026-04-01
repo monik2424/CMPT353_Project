@@ -42,8 +42,46 @@ These are set via `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`.
 
 - **Engine:** MySQL 8
 - **Database name:** `qa_db`
-- Schema and tables are created automatically on first boot via `lib/db.ts`
-- Seed data is applied by running: *(seed script coming in Step 2)*
+- **Schema:** All 6 tables are created automatically via `CREATE TABLE IF NOT EXISTS` on first request (no manual migration step needed)
+- **Seed data:** Applied automatically on first request if the `users` table is empty
+
+### Tables
+
+| Table | Description |
+|-------|-------------|
+| `users` | Accounts with hashed passwords and role |
+| `channels` | Named discussion channels |
+| `posts` | Questions/messages inside a channel |
+| `replies` | Threaded replies to posts (supports nesting via `parent_reply_id`) |
+| `votes` | Up/down votes on posts and replies |
+| `attachments` | File upload metadata linked to a post or reply |
+
+### Seed data
+
+| Entity | Count | Details |
+|--------|-------|---------|
+| Users | 3 | `admin` (role=admin), `Alice`, `Bob` |
+| Channels | 3 | general, javascript, databases |
+| Posts | 4 | spread across channels |
+| Replies | 3 | including one nested reply |
+| Attachments | 1 | linked to the welcome post |
+
+Seed user passwords:
+- `admin` → value of `ADMIN_PASSWORD` in `.env` (default: `admin123`)
+- `Alice` / `Bob` → `password123`
+
+### Verify DB is ready
+
+After `docker-compose up --build`, open:
+
+```
+http://localhost:3000/api/health
+```
+
+Expected response:
+```json
+{ "status": "ok", "db": "connected", "seed": { "users": 3, "channels": 3, "posts": 4 } }
+```
 
 ---
 
