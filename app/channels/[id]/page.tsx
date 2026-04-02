@@ -52,6 +52,12 @@ export default function ChannelPage() {
 
   if (loading) return <main className="max-w-2xl mx-auto px-4 py-10"><p className="text-gray-500">Loading…</p></main>;
   if (error)   return <main className="max-w-2xl mx-auto px-4 py-10"><p className="text-red-600">{error}</p></main>;
+  if (!channel) return (
+    <main className="max-w-2xl mx-auto px-4 py-10 space-y-3">
+      <p className="text-red-600">Channel not found.</p>
+      <Link href="/channels" className="text-sm text-blue-600 hover:underline">← Back to Channels</Link>
+    </main>
+  );
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-10 space-y-8">

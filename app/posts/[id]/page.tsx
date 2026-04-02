@@ -39,8 +39,30 @@ export default function PostPage() {
   // Reply form
   const [replyBody, setReplyBody]     = useState('');
   const [replyFile, setReplyFile]     = useState<File | null>(null);
+  const [replyFileError, setReplyFileError] = useState('');
   const [replyMsg, setReplyMsg]       = useState('');
   const [submitting, setSubmitting]   = useState(false);
+
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+  const MAX_BYTES     = 5 * 1024 * 1024;
+
+  function handleReplyFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0] ?? null;
+    setReplyFileError('');
+    if (picked) {
+      if (!ALLOWED_TYPES.includes(picked.type)) {
+        setReplyFileError('Only PNG, JPEG, and WebP images are allowed');
+        e.target.value = '';
+        return;
+      }
+      if (picked.size > MAX_BYTES) {
+        setReplyFileError('File exceeds the 5 MB limit');
+        e.target.value = '';
+        return;
+      }
+    }
+    setReplyFile(picked);
+  }
 
   async function fetchAll() {
     setLoading(true);
@@ -193,9 +215,10 @@ export default function PostPage() {
               id="reply-image"
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              onChange={e => setReplyFile(e.target.files?.[0] ?? null)}
+              onChange={handleReplyFileChange}
               className="w-full text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
             />
+            {replyFileError && <p className="text-red-600 text-sm mt-1">{replyFileError}</p>}
           </div>
 
           {replyMsg && (
@@ -206,7 +229,7 @@ export default function PostPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !!replyFileError}
             className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
           >
             {submitting ? 'Posting…' : 'Post Reply'}

@@ -11,8 +11,30 @@ export default function NewPostPage() {
   const [title, setTitle]         = useState('');
   const [body, setBody]           = useState('');
   const [file, setFile]           = useState<File | null>(null);
+  const [fileError, setFileError] = useState('');
   const [error, setError]         = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+  const MAX_BYTES     = 5 * 1024 * 1024;
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0] ?? null;
+    setFileError('');
+    if (picked) {
+      if (!ALLOWED_TYPES.includes(picked.type)) {
+        setFileError('Only PNG, JPEG, and WebP images are allowed');
+        e.target.value = '';
+        return;
+      }
+      if (picked.size > MAX_BYTES) {
+        setFileError('File exceeds the 5 MB limit');
+        e.target.value = '';
+        return;
+      }
+    }
+    setFile(picked);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,16 +130,17 @@ export default function NewPostPage() {
             id="post-image"
             type="file"
             accept="image/png,image/jpeg,image/webp"
-            onChange={e => setFile(e.target.files?.[0] ?? null)}
+            onChange={handleFileChange}
             className="w-full text-sm text-gray-600 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
+          {fileError && <p className="text-red-600 text-sm mt-1">{fileError}</p>}
         </div>
 
         {error && <p className="text-red-600 text-sm">{error}</p>}
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !!fileError}
           className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition"
         >
           {submitting ? 'Posting…' : 'Post'}
