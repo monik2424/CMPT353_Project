@@ -89,7 +89,18 @@ export async function initDB() {
     )
   `);
 
-  console.log('DB tables ensured');
+  // Indexes for search performance — silently skip if they already exist (error 1061)
+  const indexes: [string, string][] = [
+    ['idx_posts_ft',    'ALTER TABLE posts    ADD FULLTEXT INDEX idx_posts_ft (title, body)'],
+    ['idx_replies_ft',  'ALTER TABLE replies  ADD FULLTEXT INDEX idx_replies_ft (body)'],
+    ['idx_votes_target','ALTER TABLE votes    ADD INDEX idx_votes_target (target_type, target_id)'],
+    ['idx_posts_author','ALTER TABLE posts    ADD INDEX idx_posts_author (author_id)'],
+  ];
+  for (const [, sql] of indexes) {
+    try { await pool.execute(sql); } catch { /* already exists — safe to ignore */ }
+  }
+
+  console.log('DB tables and indexes ensured');
   await seedDB(pool);
 }
 

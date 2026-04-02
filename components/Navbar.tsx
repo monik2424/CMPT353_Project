@@ -43,6 +43,9 @@ export default function Navbar() {
           <Link href="/channels" className="text-sm text-gray-600 hover:underline">
             Channels
           </Link>
+          <Link href="/search" className="text-sm text-gray-600 hover:underline">
+            Search
+          </Link>
         </div>
 
         {/* Right — auth state */}

@@ -95,7 +95,11 @@ Expected response:
 | `http://localhost:3000/channels` | Browse all channels + create a channel |
 | `http://localhost:3000/channels/:id` | Channel detail — list of posts |
 | `http://localhost:3000/channels/:id/new-post` | Create a new post (with optional screenshot) |
-| `http://localhost:3000/posts/:id` | Post detail — body, replies, add reply (with optional screenshot) |
+| `http://localhost:3000/posts/:id` | Post detail — body, replies, nested replies, votes |
+| `http://localhost:3000/search` | **Search** — 5 query types with pagination |
+| `http://localhost:3000/register` | Create account |
+| `http://localhost:3000/login` | Sign in |
+| `http://localhost:3000/admin` | Admin panel (admin only) |
 
 ### API Endpoints
 
@@ -103,15 +107,70 @@ Expected response:
 |--------|-----|-------------|
 | `GET` | `/api/health` | DB connection check + seed counts |
 | `GET` | `/api/channels` | List all channels |
-| `POST` | `/api/channels` | Create a channel |
+| `POST` | `/api/channels` | Create a channel (auth required) |
+| `DELETE` | `/api/channels/:id` | Delete a channel (admin only) |
 | `GET` | `/api/channels/:id/posts` | List posts in a channel |
-| `POST` | `/api/channels/:id/posts` | Create a post |
+| `POST` | `/api/channels/:id/posts` | Create a post (auth required) |
 | `GET` | `/api/posts/:id` | Get a single post |
+| `DELETE` | `/api/posts/:id` | Delete a post (admin only) |
 | `GET` | `/api/posts/:id/replies` | List replies for a post |
-| `POST` | `/api/posts/:id/replies` | Add a reply |
+| `POST` | `/api/posts/:id/replies` | Add a reply (auth required) |
+| `DELETE` | `/api/replies/:id` | Delete a reply (admin only) |
+| `GET` | `/api/votes?target_type=&target_id=` | Get vote counts + user's vote |
+| `POST` | `/api/votes` | Cast or change a vote (auth required) |
+| `DELETE` | `/api/votes?target_type=&target_id=` | Remove a vote (auth required) |
 | `GET` | `/api/attachments?target_type=&target_id=` | Get attachments for a post or reply |
-| `POST` | `/api/upload` | Upload a screenshot (PNG/JPEG/WebP, max 5 MB) |
+| `POST` | `/api/upload` | Upload a screenshot (PNG/JPEG/WebP, max 5 MB, auth required) |
 | `GET` | `/api/files/:id` | Serve an uploaded file |
+| `GET` | `/api/search?type=&q=&limit=&offset=` | **Search** — see below |
+| `GET` | `/api/auth/me` | Current user info |
+| `POST` | `/api/auth/register` | Register a new account |
+| `POST` | `/api/auth/login` | Log in |
+| `POST` | `/api/auth/logout` | Log out |
+| `GET` | `/api/users` | List all users (admin only) |
+| `DELETE` | `/api/users/:id` | Delete a user (admin only) |
+| `GET` | `/api/admin/posts` | List all posts with author/channel (admin only) |
+| `GET` | `/api/admin/replies` | List all replies with author/post (admin only) |
+
+---
+
+## Search — Part 4
+
+### Endpoint
+
+```
+GET /api/search?type=<type>&q=<keyword>&limit=10&offset=0
+```
+
+### Query types
+
+| `type` | `q` required | Description |
+|--------|-------------|-------------|
+| `content` | yes | Substring search across **post titles**, **post bodies**, and **reply bodies** (`LIKE %q%`) |
+| `by-author` | yes | All posts and replies written by a user with exact `display_name = q` |
+| `top-authors` | no | Users ranked by post count **descending** (most prolific first) |
+| `bottom-authors` | no | Users ranked by post count **ascending** (least prolific, ≥ 1 post) |
+| `top-voted` | no | Posts ranked by **net score** descending |
+
+### Ranking formula
+
+**Net score** = `SUM(votes.value)` where `value = +1` (upvote) or `value = -1` (downvote).
+A post with 3 upvotes and 1 downvote has a net score of **+2**.
+
+### Pagination
+
+All results support `limit` (default 10, max 50) and `offset`. The response includes a `hasMore` boolean. The Search UI shows a **"Load more"** button when `hasMore = true`.
+
+### Indexes added for search performance
+
+| Index | Table | Columns | Purpose |
+|-------|-------|---------|---------|
+| `idx_posts_ft` | `posts` | `title, body` | FULLTEXT — keyword search |
+| `idx_replies_ft` | `replies` | `body` | FULLTEXT — keyword search |
+| `idx_votes_target` | `votes` | `target_type, target_id` | Fast vote aggregation |
+| `idx_posts_author` | `posts` | `author_id` | Fast author-based queries |
+
+Indexes are created automatically on container start (silently skipped if already present).
 
 ---
 
