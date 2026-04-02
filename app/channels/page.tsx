@@ -11,15 +11,22 @@ interface Channel {
   created_at: string;
 }
 
+interface CurrentUser {
+  id: number;
+  display_name: string;
+  role: 'user' | 'admin';
+}
+
 export default function ChannelsPage() {
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState('');
+  const [channels, setChannels]   = useState<Channel[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState('');
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   // Create form state
-  const [name, setName]           = useState('');
-  const [description, setDesc]    = useState('');
-  const [formMsg, setFormMsg]     = useState('');
+  const [name, setName]             = useState('');
+  const [description, setDesc]      = useState('');
+  const [formMsg, setFormMsg]       = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   async function fetchChannels() {
@@ -36,7 +43,13 @@ export default function ChannelsPage() {
     }
   }
 
-  useEffect(() => { fetchChannels(); }, []);
+  useEffect(() => {
+    fetchChannels();
+    fetch('/api/auth/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(setCurrentUser)
+      .catch(() => {});
+  }, []);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -46,8 +59,7 @@ export default function ChannelsPage() {
       const res = await fetch('/api/channels', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // TODO (Part 2): replace created_by with logged-in user id from session
-        body: JSON.stringify({ name, description, created_by: 1 }),
+        body: JSON.stringify({ name, description }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -104,6 +116,11 @@ export default function ChannelsPage() {
       {/* Create channel form */}
       <section className="border-t pt-8">
         <h2 className="text-xl font-semibold mb-4">Create a Channel</h2>
+        {!currentUser ? (
+          <p className="text-gray-500 italic">
+            <Link href="/login" className="text-blue-600 hover:underline">Sign in</Link> to create a channel.
+          </p>
+        ) : (
         <form onSubmit={handleCreate} className="space-y-3">
           <div>
             <label htmlFor="ch-name" className="block text-sm font-medium mb-1">
@@ -146,6 +163,7 @@ export default function ChannelsPage() {
             </p>
           )}
         </form>
+        )}
       </section>
 
     </main>

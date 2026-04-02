@@ -35,6 +35,7 @@ export default function PostPage() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState('');
+  const [currentUser, setCurrentUser] = useState<{ id: number; display_name: string } | null>(null);
 
   // Reply form
   const [replyBody, setReplyBody]     = useState('');
@@ -86,18 +87,23 @@ export default function PostPage() {
     }
   }
 
-  useEffect(() => { if (id) fetchAll(); }, [id]);
+  useEffect(() => {
+    if (id) fetchAll();
+    fetch('/api/auth/me')
+      .then(r => r.ok ? r.json() : null)
+      .then(setCurrentUser)
+      .catch(() => {});
+  }, [id]);
 
   async function handleReply(e: React.FormEvent) {
     e.preventDefault();
     setReplyMsg('');
     setSubmitting(true);
     try {
-      // TODO (Part 2): replace author_id with logged-in user id from session
       const res = await fetch(`/api/posts/${id}/replies`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: replyBody, author_id: 1 }),
+        body: JSON.stringify({ body: replyBody }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -191,6 +197,11 @@ export default function PostPage() {
       {/* Add reply form */}
       <section className="border-t pt-6 space-y-4">
         <h2 className="text-lg font-semibold">Add a Reply</h2>
+        {!currentUser ? (
+          <p className="text-gray-500 italic">
+            <Link href="/login" className="text-blue-600 hover:underline">Sign in</Link> to post a reply.
+          </p>
+        ) : (
         <form onSubmit={handleReply} className="space-y-3">
           <div>
             <label htmlFor="reply-body" className="block text-sm font-medium mb-1">
@@ -235,6 +246,7 @@ export default function PostPage() {
             {submitting ? 'Posting…' : 'Post Reply'}
           </button>
         </form>
+        )}
       </section>
 
     </main>

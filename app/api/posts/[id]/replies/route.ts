@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDB, getPool } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
 interface ReplyRow extends RowDataPacket {
@@ -43,8 +44,11 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   return NextResponse.json(rows);
 }
 
-// POST /api/posts/[id]/replies — add a reply to a post
+// POST /api/posts/[id]/replies — add a reply to a post (auth required)
 export async function POST(req: NextRequest, { params }: RouteParams) {
+  const user = getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: 'Login required' }, { status: 401 });
+
   await initDB();
   const pool = getPool();
   const { id } = await params;
@@ -58,11 +62,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
   const body            = await req.json();
   const replyBody       = (body.body ?? '').trim();
-  const author_id       = body.author_id;
+  const author_id       = user.id;
   const parent_reply_id = body.parent_reply_id ?? null;
 
-  if (!replyBody)  return NextResponse.json({ error: 'Body is required' },      { status: 400 });
-  if (!author_id)  return NextResponse.json({ error: 'author_id is required' }, { status: 400 });
+  if (!replyBody) return NextResponse.json({ error: 'Body is required' }, { status: 400 });
 
   if (parent_reply_id !== null) {
     const [parent] = await pool.execute<RowDataPacket[]>(

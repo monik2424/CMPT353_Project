@@ -4,17 +4,21 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import { initDB, getPool } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 const ALLOWED_MIME = new Set(['image/png', 'image/jpeg', 'image/webp']);
 const ALLOWED_EXT  = new Set(['.png', '.jpg', '.jpeg', '.webp']);
 const MAX_BYTES    = 5 * 1024 * 1024; // 5 MB
 
-// POST /api/upload
+// POST /api/upload — auth required
 // Body: multipart/form-data with fields:
 //   file        — the image file
 //   target_type — "post" | "reply"
 //   target_id   — ID of the post or reply
 export async function POST(req: NextRequest) {
+  const user = getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: 'Login required' }, { status: 401 });
+
   await initDB();
   const pool = getPool();
 

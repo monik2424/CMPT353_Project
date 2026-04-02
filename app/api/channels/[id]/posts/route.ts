@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDB, getPool } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
 interface PostRow extends RowDataPacket {
@@ -43,8 +44,11 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   return NextResponse.json(rows);
 }
 
-// POST /api/channels/[id]/posts — create a post in a channel
+// POST /api/channels/[id]/posts — create a post in a channel (auth required)
 export async function POST(req: NextRequest, { params }: RouteParams) {
+  const user = getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: 'Login required' }, { status: 401 });
+
   await initDB();
   const pool = getPool();
   const { id } = await params;
@@ -57,13 +61,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   }
 
   const body      = await req.json();
-  const title     = (body.title     ?? '').trim();
-  const postBody  = (body.body      ?? '').trim();
-  const author_id = body.author_id;
+  const title     = (body.title ?? '').trim();
+  const postBody  = (body.body  ?? '').trim();
+  const author_id = user.id;
 
-  if (!title)     return NextResponse.json({ error: 'Title is required' },     { status: 400 });
-  if (!postBody)  return NextResponse.json({ error: 'Body is required' },      { status: 400 });
-  if (!author_id) return NextResponse.json({ error: 'author_id is required' }, { status: 400 });
+  if (!title)    return NextResponse.json({ error: 'Title is required' }, { status: 400 });
+  if (!postBody) return NextResponse.json({ error: 'Body is required' },  { status: 400 });
   if (title.length > 255) {
     return NextResponse.json({ error: 'Title must be 255 characters or fewer' }, { status: 400 });
   }

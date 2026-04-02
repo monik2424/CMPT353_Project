@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDB, getPool } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
 interface ChannelRow extends RowDataPacket {
@@ -27,24 +28,24 @@ export async function GET() {
   return NextResponse.json(rows);
 }
 
-// POST /api/channels — create a channel
+// POST /api/channels — create a channel (auth required)
 export async function POST(req: NextRequest) {
+  const user = getCurrentUser(req);
+  if (!user) return NextResponse.json({ error: 'Login required' }, { status: 401 });
+
   await initDB();
   const pool = getPool();
 
   const body = await req.json();
   const name        = (body.name        ?? '').trim();
   const description = (body.description ?? '').trim() || null;
-  const created_by  = body.created_by;
+  const created_by  = user.id;
 
   if (!name) {
     return NextResponse.json({ error: 'Channel name is required' }, { status: 400 });
   }
   if (name.length > 100) {
     return NextResponse.json({ error: 'Channel name must be 100 characters or fewer' }, { status: 400 });
-  }
-  if (!created_by) {
-    return NextResponse.json({ error: 'created_by is required' }, { status: 400 });
   }
 
   const [existing] = await pool.execute<RowDataPacket[]>(

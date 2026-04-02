@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
 export default function NewPostPage() {
   const { id } = useParams<{ id: string }>();
   const router  = useRouter();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => {
+      if (!r.ok) router.replace(`/login`);
+    });
+  }, []);
 
   const [title, setTitle]         = useState('');
   const [body, setBody]           = useState('');
@@ -43,11 +50,10 @@ export default function NewPostPage() {
 
     try {
       // 1. Create the post
-      // TODO (Part 2): replace author_id with logged-in user id from session
       const res = await fetch(`/api/channels/${id}/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, author_id: 1 }),
+        body: JSON.stringify({ title, body }),
       });
       const data = await res.json();
       if (!res.ok) {
