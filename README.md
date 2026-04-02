@@ -85,6 +85,36 @@ Expected response:
 
 ---
 
+## Pages & Routes
+
+### UI Pages
+
+| URL | What it does |
+|-----|-------------|
+| `http://localhost:3000/` | Landing page |
+| `http://localhost:3000/channels` | Browse all channels + create a channel |
+| `http://localhost:3000/channels/:id` | Channel detail — list of posts |
+| `http://localhost:3000/channels/:id/new-post` | Create a new post (with optional screenshot) |
+| `http://localhost:3000/posts/:id` | Post detail — body, replies, add reply (with optional screenshot) |
+
+### API Endpoints
+
+| Method | URL | Description |
+|--------|-----|-------------|
+| `GET` | `/api/health` | DB connection check + seed counts |
+| `GET` | `/api/channels` | List all channels |
+| `POST` | `/api/channels` | Create a channel |
+| `GET` | `/api/channels/:id/posts` | List posts in a channel |
+| `POST` | `/api/channels/:id/posts` | Create a post |
+| `GET` | `/api/posts/:id` | Get a single post |
+| `GET` | `/api/posts/:id/replies` | List replies for a post |
+| `POST` | `/api/posts/:id/replies` | Add a reply |
+| `GET` | `/api/attachments?target_type=&target_id=` | Get attachments for a post or reply |
+| `POST` | `/api/upload` | Upload a screenshot (PNG/JPEG/WebP, max 5 MB) |
+| `GET` | `/api/files/:id` | Serve an uploaded file |
+
+---
+
 ## Environment Variables
 
 See `.env.example` for all required variables. Copy it to `.env` before running.
