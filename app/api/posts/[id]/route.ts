@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDB, getPool } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 import { RowDataPacket } from 'mysql2';
 
 interface PostRow extends RowDataPacket {
@@ -33,4 +34,19 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json(rows[0]);
+}
+
+// DELETE /api/posts/[id] — admin only
+export async function DELETE(req: NextRequest, { params }: RouteParams) {
+  const user = getCurrentUser(req);
+  if (!user || user.role !== 'admin') {
+    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  }
+
+  await initDB();
+  const pool = getPool();
+  const { id } = await params;
+
+  await pool.execute('DELETE FROM posts WHERE id = ?', [id]);
+  return NextResponse.json({ message: 'Post deleted' });
 }
