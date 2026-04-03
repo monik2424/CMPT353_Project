@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDB, getPool } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { isRateLimited } from '@/lib/rateLimit';
 import { RowDataPacket } from 'mysql2';
 
 interface ReplyRow extends RowDataPacket {
@@ -49,6 +50,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const user = getCurrentUser(req);
   if (!user) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
+  // Rate limit: 20 replies per user per minute
+  if (isRateLimited(`reply:${user.id}`, 20)) {
+    return NextResponse.json({ error: 'Too many replies. Please slow down.' }, { status: 429 });
+  }
+
   await initDB();
   const pool = getPool();
   const { id } = await params;
@@ -66,6 +72,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const parent_reply_id = body.parent_reply_id ?? null;
 
   if (!replyBody) return NextResponse.json({ error: 'Body is required' }, { status: 400 });
+  if (replyBody.length > 5_000) {
+    return NextResponse.json({ error: 'Reply body must be 5,000 characters or fewer' }, { status: 400 });
+  }
 
   if (parent_reply_id !== null) {
     const [parent] = await pool.execute<RowDataPacket[]>(

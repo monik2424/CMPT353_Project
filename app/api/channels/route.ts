@@ -47,6 +47,9 @@ export async function POST(req: NextRequest) {
   if (name.length > 100) {
     return NextResponse.json({ error: 'Channel name must be 100 characters or fewer' }, { status: 400 });
   }
+  if (description && description.length > 500) {
+    return NextResponse.json({ error: 'Description must be 500 characters or fewer' }, { status: 400 });
+  }
 
   const [existing] = await pool.execute<RowDataPacket[]>(
     'SELECT id FROM channels WHERE name = ?', [name]

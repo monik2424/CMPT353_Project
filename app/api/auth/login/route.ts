@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcrypt';
 import { initDB, getPool } from '@/lib/db';
 import { signToken } from '@/lib/auth';
+import { isRateLimited, getClientIp } from '@/lib/rateLimit';
 import { RowDataPacket } from 'mysql2';
 
 interface DbUser extends RowDataPacket {
@@ -12,6 +13,15 @@ interface DbUser extends RowDataPacket {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limit: 5 login attempts per IP per minute
+  const ip = getClientIp(req);
+  if (isRateLimited(`login:${ip}`, 5)) {
+    return NextResponse.json(
+      { error: 'Too many login attempts. Please wait a minute and try again.' },
+      { status: 429 }
+    );
+  }
+
   await initDB();
   const pool = getPool();
 
@@ -19,6 +29,13 @@ export async function POST(req: NextRequest) {
 
   if (!display_name || !password) {
     return NextResponse.json({ error: 'Display name and password are required' }, { status: 400 });
+  }
+  // Prevent bcrypt DoS from extremely long passwords
+  if (typeof display_name !== 'string' || display_name.length > 100) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
+  }
+  if (typeof password !== 'string' || password.length > 200) {
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 
   const [rows] = await pool.execute<DbUser[]>(

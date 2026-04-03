@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initDB, getPool } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { isRateLimited } from '@/lib/rateLimit';
 import { RowDataPacket } from 'mysql2';
 
 interface PostRow extends RowDataPacket {
@@ -49,6 +50,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   const user = getCurrentUser(req);
   if (!user) return NextResponse.json({ error: 'Login required' }, { status: 401 });
 
+  // Rate limit: 10 posts per user per minute
+  if (isRateLimited(`post:${user.id}`, 10)) {
+    return NextResponse.json({ error: 'Too many posts. Please slow down.' }, { status: 429 });
+  }
+
   await initDB();
   const pool = getPool();
   const { id } = await params;
@@ -69,6 +75,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   if (!postBody) return NextResponse.json({ error: 'Body is required' },  { status: 400 });
   if (title.length > 255) {
     return NextResponse.json({ error: 'Title must be 255 characters or fewer' }, { status: 400 });
+  }
+  if (postBody.length > 10_000) {
+    return NextResponse.json({ error: 'Post body must be 10,000 characters or fewer' }, { status: 400 });
   }
 
   const [result] = await pool.execute<RowDataPacket & { insertId: number }>(
