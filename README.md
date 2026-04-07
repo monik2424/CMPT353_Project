@@ -1,5 +1,11 @@
 # CMPT 353 — Channel-Based Programming Q&A Tool
 
+## Demo Video
+
+[https://youtu.be/k_g1of-e48M](https://youtu.be/k_g1of-e48M)
+
+---
+
 ## Quick Start (Docker)
 
 ```bash
@@ -64,7 +70,6 @@ These are set via `ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`.
 | Channels | 3 | general, javascript, databases |
 | Posts | 4 | spread across channels |
 | Replies | 3 | including one nested reply |
-| Attachments | 1 | linked to the welcome post |
 
 Seed user passwords:
 - `admin` → value of `ADMIN_PASSWORD` in `.env` (default: `admin123`)

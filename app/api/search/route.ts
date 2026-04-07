@@ -27,8 +27,13 @@ export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
     const type   = searchParams.get('type') ?? 'content';
     const q      = searchParams.get('q') ?? '';
+    // parseInt then clamp — safe to interpolate directly into SQL (no user string, pure integers)
     const limit  = Math.min(Math.max(parseInt(searchParams.get('limit')  ?? '10'), 1), 50);
     const offset = Math.max(parseInt(searchParams.get('offset') ?? '0'), 0);
+    // mysql2 prepared statements don't accept LIMIT/OFFSET as bound params in all MySQL 8 configs;
+    // interpolate the already-sanitised integers directly instead.
+    const limitSql  = String(limit);
+    const offsetSql = String(offset);
 
     // ── 1. Keyword search across post titles, post bodies, and reply bodies ──
     if (type === 'content') {
@@ -50,8 +55,8 @@ export async function GET(req: NextRequest) {
         JOIN channels c ON c.id = p.channel_id
         WHERE p.title LIKE ? OR p.body LIKE ?
         ORDER BY p.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [like, like, limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, [like, like]);
 
       const [replyRows] = await pool.execute<any[]>(`
         SELECT
@@ -70,8 +75,8 @@ export async function GET(req: NextRequest) {
         JOIN channels c ON c.id = p.channel_id
         WHERE r.body LIKE ?
         ORDER BY r.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [like, limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, [like]);
 
       const results = [...postRows, ...replyRows].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -99,8 +104,8 @@ export async function GET(req: NextRequest) {
         JOIN channels c ON c.id = p.channel_id
         WHERE u.display_name = ?
         ORDER BY p.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [q, limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, [q]);
 
       const [replyRows] = await pool.execute<any[]>(`
         SELECT
@@ -119,8 +124,8 @@ export async function GET(req: NextRequest) {
         JOIN channels c ON c.id = p.channel_id
         WHERE u.display_name = ?
         ORDER BY r.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [q, limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, [q]);
 
       const results = [...postRows, ...replyRows].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -141,8 +146,8 @@ export async function GET(req: NextRequest) {
         LEFT JOIN posts p ON p.author_id = u.id
         GROUP BY u.id
         ORDER BY post_count DESC, u.display_name ASC
-        LIMIT ? OFFSET ?
-      `, [limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, []);
 
       return NextResponse.json({ results: rows, hasMore: rows.length === limit });
     }
@@ -159,8 +164,8 @@ export async function GET(req: NextRequest) {
         INNER JOIN posts p ON p.author_id = u.id
         GROUP BY u.id
         ORDER BY post_count ASC, u.display_name ASC
-        LIMIT ? OFFSET ?
-      `, [limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, []);
 
       return NextResponse.json({ results: rows, hasMore: rows.length === limit });
     }
@@ -184,8 +189,8 @@ export async function GET(req: NextRequest) {
         LEFT JOIN votes v ON v.target_type = 'post' AND v.target_id = p.id
         GROUP BY p.id, p.title, p.body, u.display_name, c.name, p.created_at
         ORDER BY net_score DESC, p.created_at DESC
-        LIMIT ? OFFSET ?
-      `, [limit, offset]);
+        LIMIT ${limitSql} OFFSET ${offsetSql}
+      `, []);
 
       return NextResponse.json({ results: rows, hasMore: rows.length === limit });
     }

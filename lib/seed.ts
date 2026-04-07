@@ -106,12 +106,6 @@ export async function seedDB(pool: mysql.Pool) {
     ]
   );
 
-  // --- Attachment (on the welcome post) ---
-  await pool.execute(
-    'INSERT INTO attachments (target_type, target_id, mime_type, size_bytes, store_path) VALUES (?, ?, ?, ?, ?)',
-    ['post', p1.insertId, 'image/png', 12345, '/uploads/seed-welcome.png']
-  );
-
-  console.log(`Seed complete — users: 3 (admin="${adminName}", alice, bob), channels: 3, posts: 4, replies: 3, attachments: 1`);
+  console.log(`Seed complete — users: 3 (admin="${adminName}", alice, bob), channels: 3, posts: 4, replies: 3`);
   console.log('Seed user passwords: admin → $ADMIN_PASSWORD from .env  |  alice & bob → password123');
 }
